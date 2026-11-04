@@ -56,6 +56,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/OWNER/REPO.git"
+    "url": "git+https://github.com/xymy666/dsh-tray-flash.git"
+  },
+  "homepage": "https://github.com/xymy666/dsh-tray-flash#readme",
+  "bugs": {
+    "url": "https://github.com/xymy666/dsh-tray-flash/issues"
   }
 }
