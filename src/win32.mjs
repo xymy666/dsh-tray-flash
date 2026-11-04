@@ -131,6 +131,9 @@ export function createWin32(koffi) {
   const isWindowVisible = user32.func('bool __stdcall IsWindowVisible(void* h)')
   const isWindow = user32.func('int __stdcall IsWindow(void* h)')
   const getForegroundWindow = user32.func('void* __stdcall GetForegroundWindow()')
+  // Declared with an untyped pointer so the caller can supply its own buffer;
+  // see cursorPosition() for why a POINT struct is not used here.
+  const getCursorPos = user32.func('bool __stdcall GetCursorPos(void* point)')
 
   // The struct must be declared with the exact layout Windows expects. `hwnd`
   // is a pointer, so it carries 8-byte alignment on x64 and pads both sides.
@@ -309,6 +312,38 @@ export function createWin32(koffi) {
     return sameHandle(getForegroundWindow(), hwnd)
   }
 
+  /**
+   * Read the mouse position.
+   *
+   * The output is passed as a raw 8-byte buffer rather than a koffi `struct`.
+   * Declaring a `POINT` struct and passing it by pointer silently yielded 0,0
+   * while the same call through a buffer returned the real coordinates, so the
+   * buffer form is the one that works.
+   *
+   * @returns `{ x, y }`, or `undefined` when Windows refuses the read.
+   */
+  function cursorPosition() {
+    const point = Buffer.alloc(8)
+    if (!getCursorPos(point)) return undefined
+    return { x: point.readInt32LE(0), y: point.readInt32LE(4) }
+  }
+
+  /**
+   * Whether the pointer has left a previously sampled position.
+   *
+   * A one-pixel difference counts: the point of the signal is "you moved the
+   * mouse", and requiring a threshold would make a small deliberate nudge fail
+   * to register.
+   *
+   * @param previous - position from {@link cursorPosition}, or undefined.
+   * @param current - position from {@link cursorPosition}, or undefined.
+   * @returns true when both positions exist and differ on either axis.
+   */
+  function cursorMoved(previous, current) {
+    if (previous === undefined || current === undefined) return false
+    return previous.x !== current.x || previous.y !== current.y
+  }
+
   return {
     structSize: flashInfo.size,
     user32,
@@ -321,6 +356,8 @@ export function createWin32(koffi) {
     stop,
     isLive,
     isForeground,
+    cursorPosition,
+    cursorMoved,
     dispose() {
       // Nothing owns a native handle here; the callback type lives for the
       // module's lifetime and is released with the process.

@@ -81,6 +81,34 @@ node scripts/build-icon.mjs        # 产物：assets/blank.ico
 
 托盘不可用（找不到宿主窗口、图标加载失败、shell 拒绝）时，自动降级为「只闪任务栏」，日志里只警告一次。
 
+### 窗口在前台、当前会话完成时：闪到鼠标移动
+
+有一类情况原来的规则覆盖不到：
+
+```
+窗口本来就在前台 + 刚完成的就是你正在看的那个会话
+  → 没有点可等（主会话永远不产生真实圆点）
+  → 「窗口在前台」在回合结束前就已经成立，不能当作"你看过了"
+  → 结果是闪一下就停，盯着屏幕的人反而毫无反馈
+```
+
+`flashUntilMouseMoves`（默认开）把确认信号从「窗口获得焦点」换成「**鼠标动了**」：
+
+| 情况 | 停止条件 |
+|---|---|
+| 窗口在**后台**时开始闪 | 切回窗口即停（切回本身就是动作） |
+| 窗口在**前台**、当前会话完成 | **鼠标移动**、切换会话、或窗口失焦才停 |
+
+鼠标检测走已有的 1 秒轮询，不新增定时器。任意 1 像素的移动都算——要求移动距离反而会让小幅度的、明确的动作失效。
+
+注意 `GetCursorPos` 必须传 8 字节缓冲区：声明成 koffi 的 `POINT` 结构体再传指针，会静默读回 `0,0`（坐标永远是 0,0 就不会有"移动"），而同样的调用换成缓冲区就正常。这个坑已写在 `src/win32.mjs` 里。
+
+关掉它就回到旧行为（前台时闪一下就停）：
+
+```yaml
+flashUntilMouseMoves: false
+```
+
 ## 安装
 
 包目录：`E:\0_opencode\.00工作空间\dsh-tray-flash`
@@ -130,6 +158,7 @@ Remove-Item "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\dsh-tray-flash"
         flashCaption: true        # 标题栏也闪（false 只闪任务栏按钮）
         maxFlashSeconds: 0        # 0 = 跟随点，永不超时（默认）；正数 = 保险上限
         onlyWhenUnfocused: true   # 前台就不闪（只在点状态未知时生效）
+        flashUntilMouseMoves: true # 前台+当前会话完成时，闪到你动鼠标才停
         ignoreInterrupted: true   # 被打断的一轮不闪
         ignoreSubagent: true      # 子代理不闪
         flashTimeout: 0           # FlashWindowEx 的 dwTimeout(ms)

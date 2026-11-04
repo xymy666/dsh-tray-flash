@@ -42,6 +42,12 @@ export const STOP = {
   dotsCleared: 'dots-cleared',
   /** Fell back to focus because the Client's dot report is not available. */
   focused: 'focused',
+  /** The pointer moved, which is how a focused attempt is acknowledged. */
+  mouseMoved: 'mouse-moved',
+  /** The person switched to another session, so this one has been seen. */
+  sessionSwitched: 'session-switched',
+  /** The window stopped being the foreground one while awaiting a mouse move. */
+  blurred: 'blurred',
   windowGone: 'window-gone',
   timeout: 'timeout',
   disabled: 'disabled',
@@ -113,6 +119,20 @@ export function createAttention(dependencies) {
   let deadlineAt
   let lastStop
   let disposed = false
+  /**
+   * Whether this flash is waiting on a mouse move rather than on the dots.
+   *
+   * Set when the turn that triggered the flash belongs to the session already on
+   * screen *and* the window already has the foreground: there is no dot to wait
+   * for in that case (the main session never earns one), yet the answer is still
+   * worth announcing. The pointer becomes the "I have seen it" signal instead of
+   * focus, so the flash does not end in the same tick it began.
+   */
+  let awaitingMouse = false
+  /** Pointer position when the flash started, for the move comparison. */
+  let cursorAtStart
+  /** Session that was on screen when the flash started, for switch detection. */
+  let sessionAtStart
 
   /**
    * Resolve the Harness window, trying each candidate process id in order.
@@ -147,6 +167,9 @@ export function createAttention(dependencies) {
     pending.clear()
     startedAt = undefined
     deadlineAt = undefined
+    awaitingMouse = false
+    cursorAtStart = undefined
+    sessionAtStart = undefined
     if (target !== undefined) {
       try {
         port.stop(target)
@@ -185,6 +208,30 @@ export function createAttention(dependencies) {
     }
     if (!port.isLive(hwnd)) {
       stopFlashing(STOP.windowGone)
+      return
+    }
+
+    // Waiting on the pointer: this flash was raised by the session already on
+    // screen, so focus alone is not the acknowledgement — the person may be
+    // reading the answer without having touched anything. The pointer moving,
+    // switching session, or leaving the window ends it.
+    if (awaitingMouse) {
+      if (!port.isForeground(hwnd)) {
+        stopFlashing(STOP.blurred)
+        return
+      }
+      const current = dots?.currentSessionId?.()
+      if (sessionAtStart !== undefined && current !== undefined && current !== sessionAtStart) {
+        stopFlashing(STOP.sessionSwitched)
+        return
+      }
+      if (port.cursorMoved?.(cursorAtStart, port.cursorPosition?.()) === true) {
+        stopFlashing(STOP.mouseMoved)
+        return
+      }
+      if (deadlineAt !== undefined && now() >= deadlineAt) {
+        stopFlashing(STOP.timeout)
+      }
       return
     }
 
@@ -239,6 +286,25 @@ export function createAttention(dependencies) {
       ? startedAt + options.maxFlashSeconds * 1000
       : undefined
 
+    // Decide whether focus alone can acknowledge this flash.
+    //
+    // It cannot when the window is already in front and the flash belongs to the
+    // session on screen: the answer appeared in a conversation the person is
+    // already looking at, so "the window is focused" was true *before* the turn
+    // finished and says nothing about whether the result was seen. Waiting for
+    // the pointer is the distinction between "the window happens to be open" and
+    // "a human moved".
+    const wantsMouse = options.flashUntilMouseMoves === true
+      && kind !== 'self-test'
+      && port.isForeground(window.hwnd)
+
+    // Without a readable pointer position there is nothing to compare against.
+    // Falling back to the ordinary dot/focus rule is the only safe option; an
+    // armed wait on an unreadable pointer would flash until the deadline.
+    cursorAtStart = wantsMouse ? port.cursorPosition?.() : undefined
+    awaitingMouse = wantsMouse && cursorAtStart !== undefined
+    sessionAtStart = awaitingMouse ? dots?.currentSessionId?.() : undefined
+
     let raw
     try {
       raw = port.flash(window.hwnd, {
@@ -248,6 +314,7 @@ export function createAttention(dependencies) {
       })
     } catch (error) {
       hwnd = undefined
+      awaitingMouse = false
       return { started: false, reason: 'flash-failed', error: describe(error) }
     }
 
@@ -418,10 +485,16 @@ export function createAttention(dependencies) {
      * the running flash already covers it, and restarting would reset its timer.
      */
     updateDots(report) {
-      const before = dots?.total?.() ?? 0
       const snapshot = dots?.update?.(report)
       const after = dots?.total?.() ?? 0
-      if (after > before && timer === undefined) evaluate('dots')
+      // Start whenever there is something to show and nothing is showing it.
+      //
+      // A growth test alone missed a real case: once a flash has stopped, its dot
+      // is still counted (the virtual main dot is only cleared by focus), so the
+      // next turn on the same session leaves the total unchanged and the new
+      // answer would never be announced. "Any dot, no flash running" covers both
+      // that and a dot that appears without changing the total.
+      if (timer === undefined && after > 0) evaluate('dots')
       return snapshot
     },
     /** Clear every dot, used by the Client's unload handler and the self-test. */

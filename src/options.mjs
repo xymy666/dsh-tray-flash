@@ -20,6 +20,16 @@ export const DEFAULTS = Object.freeze({
   /** Do nothing when the Harness window already has the foreground. */
   onlyWhenUnfocused: true,
   /**
+   * Keep flashing until the pointer moves, when the window is already in front.
+   *
+   * A window that is focused *before* the turn ended has not acknowledged the
+   * answer, and the main session never earns a dot, so without this the flash
+   * would end in the same tick it started and the person watching would get no
+   * signal at all. The pointer moving (or switching session, or leaving the
+   * window) is the acknowledgement instead. Set false for the older behaviour.
+   */
+  flashUntilMouseMoves: true,
+  /**
    * Stop a flash that nobody answered after this many seconds (0 = never).
    *
    * The default is 0: the flash follows the attention dots, so it lasts until
@@ -90,6 +100,7 @@ const BOOLEAN = [
   'trayBlink',
   'stopWhenDotsClear',
   'virtualMainDot',
+  'flashUntilMouseMoves',
 ]
 
 /**
