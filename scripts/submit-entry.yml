@@ -1,0 +1,22 @@
+# Submission entry for awesome-dsh-plugin
+#
+# Copy this file to the list repository as:
+#   data/plugins/<owner>__dsh-tray-flash.yml
+#
+# Replace every <owner> with your GitHub user name, and make sure the `url`
+# matches the repository exactly (the CI compares them).
+#
+# Requirements this file depends on, all already satisfied in package.json:
+#   * dsh.bundle.patch -> ./cordis.patch.yml   (required; dsh.client alone fails)
+#   * the repo must be at least 1 day old
+#   * add the `dsh-plugin` topic to the repository
+#
+# `icon` must be a GitHub-hosted raster image (png/jpg/webp); SVG is refused.
+
+url: https://github.com/<owner>/dsh-tray-flash
+name: <owner>/dsh-tray-flash
+category: notify
+description:
+  en: Blinks the Windows notification-area icon between the app's own icon and a fully transparent frame, and flashes the taskbar button, when a turn finishes or a session waits for an approval or an answer. Keeps going while the session list still shows an unread or waiting dot.
+  zh: 任务完成、或有会话在等你审批或回答时，让 Windows 通知区域的图标在「原图标 ⇄ 全透明」之间闪烁，同时闪任务栏按钮；侧边栏还挂着未读或等待的圆点就一直闪，点全部消失才停。
+icon: https://raw.githubusercontent.com/<owner>/dsh-tray-flash/main/assets/icon-256.png
