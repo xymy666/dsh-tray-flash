@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Attention Flash">
+  <title>Attention Flash</title>
+  <!-- Original artwork: a bell marking "waiting for you", plus an unread badge. -->
+  <defs>
+    <linearGradient id="bell" x1="18" y1="10" x2="46" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5B8CFF"/>
+      <stop offset="1" stop-color="#2F5BE0"/>
+    </linearGradient>
+  </defs>
+  <path d="M32 8c-1.9 0-3.4 1.5-3.4 3.4v1.2C21.6 14.4 17 20.4 17 27.6v9.2l-3.6 5.6c-.9 1.4.1 3.2 1.7 3.2h33.8c1.6 0 2.6-1.8 1.7-3.2L47 36.8v-9.2c0-7.2-4.6-13.2-11.6-15v-1.2C35.4 9.5 33.9 8 32 8z"
+        fill="url(#bell)"/>
+  <path d="M26.5 48.5a5.5 5.5 0 0 0 11 0z" fill="#2F5BE0"/>
+  <circle cx="47.5" cy="15.5" r="9" fill="#FF3B30"/>
+  <circle cx="47.5" cy="15.5" r="3.6" fill="#fff"/>
+</svg>

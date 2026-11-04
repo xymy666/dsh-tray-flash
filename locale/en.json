@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Attention Flash",
+    "description": "Blinks the tray icon on and off like QQ and flashes the taskbar button when a turn finishes or an approval/question is waiting. Keeps going while any dot is showing, and stops once they are all gone."
+  }
+}

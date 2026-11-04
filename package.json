@@ -1,0 +1,61 @@
+{
+  "name": "dsh-tray-flash",
+  "version": "0.4.2",
+  "description": "任务完成或等待审批/回答时，DeepSeek Harness 的托盘图标像 QQ 一样隐显闪烁、任务栏按钮同时闪；只要还有黄点/绿点就一直闪，点全部消失才停。",
+  "license": "MIT",
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": "./lib/client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "src/*.mjs",
+    "assets/blank.ico",
+    "locale/*.json",
+    "cordis.patch.yml",
+    "icon.svg",
+    "assets/icon-256.png",
+    "README.md",
+    "screenshots.json"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-session"
+      ]
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "selftest": "node scripts/selftest.mjs",
+    "build:icon": "node scripts/build-icon.mjs"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "dsh",
+    "windows",
+    "tray",
+    "taskbar",
+    "notification"
+  ],
+  "dependencies": {
+    "koffi": "^3.1.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OWNER/REPO.git"
+  }
+}

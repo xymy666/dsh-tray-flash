@@ -1,0 +1,19 @@
+# Dependencies (installed by whoever consumes the package)
+node_modules/
+
+# Build artefacts that are regenerated, not shipped
+assets/blank-preview.png
+*.tgz
+*.log
+
+# Probe output (written by scripts/probe-*.mjs at runtime)
+assets/*-probe/
+assets/dot-trigger/
+assets/blank-states/
+assets/live-probe/
+assets/foreground-probe/
+assets/attention-probe/
+
+# OS clutter
+.DS_Store
+Thumbs.db
