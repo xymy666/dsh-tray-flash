@@ -23,6 +23,7 @@
     "cordis.patch.yml",
     "icon.svg",
     "assets/icon-256.png",
+    "CHANGELOG.md",
     "README.md",
     "screenshots.json"
   ],
