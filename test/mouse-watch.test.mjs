@@ -249,10 +249,10 @@ test('the armed state is cleared when the flash stops', () => {
   // start position would be the previous flash's, so a move made long ago would
   // still read as an acknowledgement. The cursor stays where it was moved to.
   //
-  // Routed through updateDots on purpose: that is the path the Client report
-  // takes, and it is the one that has to start the flash.
+  // Restarted through the virtual main-session dot on purpose: this test is about
+  // the pointer wait, which only exists when no real yellow/green dot is showing.
   h.advance(1_000)
-  h.attention.updateDots({ counts: { unread: 1 }, mainSessionId: h.state.session })
+  finishCurrentSession(h)
   h.tick()
   assert.equal(h.attention.snapshot().flashing, true)
 

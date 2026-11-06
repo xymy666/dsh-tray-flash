@@ -187,3 +187,31 @@ test('the snapshot is a plain object the route can serialize', () => {
   assert.equal(snapshot.status, STATUS_LIVE)
   assert.deepEqual(snapshot.counts, { approval: 0, question: 0, unread: 1 })
 })
+
+test('real dots exclude the virtual main-session flag', () => {
+  const h = harness()
+  h.dots.update({ counts: { approval: 1, question: 0, unread: 2 } })
+  h.dots.noteTurnEnd('main-1', true)
+
+  assert.equal(h.dots.realTotal(), 3)
+  assert.equal(h.dots.total(), 4)
+  assert.equal(h.dots.hasRealDots(), true)
+})
+
+test('a virtual main dot alone is not a real dot', () => {
+  const h = harness()
+  h.dots.update({ counts: {} })
+  h.dots.noteTurnEnd('main-1', true)
+
+  assert.equal(h.dots.realTotal(), 0)
+  assert.equal(h.dots.hasRealDots(), false)
+  assert.equal(h.dots.hasDots(), true, 'the virtual dot still keeps the flash alive')
+})
+
+test('real dots read as unknown when the Client goes stale', () => {
+  const h = harness()
+  h.dots.update({ counts: { unread: 1 } })
+  h.advance(61_000)
+
+  assert.equal(h.dots.hasRealDots(), undefined, 'unknown, not clear')
+})

@@ -215,24 +215,34 @@ export function createAttention(dependencies) {
     // screen, so focus alone is not the acknowledgement — the person may be
     // reading the answer without having touched anything. The pointer moving,
     // switching session, or leaving the window ends it.
+    //
+    // A real yellow/green dot outranks the pointer. One can appear after this
+    // wait was armed (an approval arrives, or a background session finishes),
+    // and by then the person has something to look at in the session list; the
+    // rule the plugin exists for is "flash until no dot is left", so the pointer
+    // must not cut that short. Disarm and fall through to the dot rule.
     if (awaitingMouse) {
-      if (!port.isForeground(hwnd)) {
-        stopFlashing(STOP.blurred)
+      if (dots?.hasRealDots?.() === true) {
+        awaitingMouse = false
+      } else {
+        if (!port.isForeground(hwnd)) {
+          stopFlashing(STOP.blurred)
+          return
+        }
+        const current = dots?.currentSessionId?.()
+        if (sessionAtStart !== undefined && current !== undefined && current !== sessionAtStart) {
+          stopFlashing(STOP.sessionSwitched)
+          return
+        }
+        if (port.cursorMoved?.(cursorAtStart, port.cursorPosition?.()) === true) {
+          stopFlashing(STOP.mouseMoved)
+          return
+        }
+        if (deadlineAt !== undefined && now() >= deadlineAt) {
+          stopFlashing(STOP.timeout)
+        }
         return
       }
-      const current = dots?.currentSessionId?.()
-      if (sessionAtStart !== undefined && current !== undefined && current !== sessionAtStart) {
-        stopFlashing(STOP.sessionSwitched)
-        return
-      }
-      if (port.cursorMoved?.(cursorAtStart, port.cursorPosition?.()) === true) {
-        stopFlashing(STOP.mouseMoved)
-        return
-      }
-      if (deadlineAt !== undefined && now() >= deadlineAt) {
-        stopFlashing(STOP.timeout)
-      }
-      return
     }
 
     // A person looking at the window has seen whatever the main session produced,
@@ -294,8 +304,15 @@ export function createAttention(dependencies) {
     // finished and says nothing about whether the result was seen. Waiting for
     // the pointer is the distinction between "the window happens to be open" and
     // "a human moved".
+    //
+    // It must not even try when a real yellow/green dot is showing: those dots
+    // are the acknowledgement the user cares about, and arming a pointer wait for
+    // a dot-triggered flash was what ended a blink on the first mouse move while
+    // the sidebar still showed a dot.
+    const realDots = dots?.hasRealDots?.()
     const wantsMouse = options.flashUntilMouseMoves === true
       && kind !== 'self-test'
+      && realDots !== true
       && port.isForeground(window.hwnd)
 
     // Without a readable pointer position there is nothing to compare against.

@@ -95,6 +95,19 @@ export function createDots(dependencies = {}) {
   }
 
   /**
+   * Dots the Client is actually drawing, excluding the virtual main-session one.
+   *
+   * These are the yellow (approval/question) and green (unread) dots a person can
+   * point at in the session list. They outrank every focus- or pointer-based stop
+   * rule: the flash exists to last until this count reaches zero.
+   *
+   * @returns the number of real dots.
+   */
+  function realTotal() {
+    return counts.approval + counts.question + counts.unread
+  }
+
+  /**
    * Total dots the user can currently see.
    *
    * The virtual main-session flag counts as one, so a main-session turn keeps the
@@ -103,7 +116,21 @@ export function createDots(dependencies = {}) {
    * @returns the number of dots.
    */
   function total() {
-    return counts.approval + counts.question + counts.unread + (mainUnread ? 1 : 0)
+    return realTotal() + (mainUnread ? 1 : 0)
+  }
+
+  /**
+   * Whether a real yellow/green dot is still showing.
+   *
+   * Follows the same staleness contract as {@link hasDots}: a Client that stopped
+   * reporting answers `undefined` (unknown), never `false`, so a silent page
+   * cannot fake "all clear".
+   *
+   * @returns true (dots remain), false (all clear), or undefined (unknown).
+   */
+  function hasRealDots() {
+    if (!isLive()) return undefined
+    return realTotal() > 0
   }
 
   /**
@@ -237,6 +264,7 @@ export function createDots(dependencies = {}) {
     return {
       status: status(),
       counts: { ...counts },
+      realTotal: realTotal(),
       total: total(),
       virtualMainUnread: mainUnread,
       mainSessionId,
@@ -262,9 +290,11 @@ export function createDots(dependencies = {}) {
     invalidate,
     warnIfStale,
     hasDots,
+    hasRealDots,
     isLive,
     status,
     total,
+    realTotal,
     mainPending,
     currentSessionId,
     snapshot,

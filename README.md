@@ -28,6 +28,8 @@
 | 🟡 黄点 | 有审批 / 计划审批 / 提问在等你 | Client 的 `pendingInteraction` |
 | 🟢 绿点 | 后台会话跑完了一轮，你还没看 | Client 的 `completionUnread` |
 
+**有真实点时，焦点、失焦、切换会话、鼠标移动都不能提前结束闪烁**——这些只是「碰了一下窗口」，不等于「看过这件事了」。唯一的例外是下面说的主会话虚拟点：它本来就是用焦点来清掉的。
+
 除此之外：
 
 1. 窗口被关闭/销毁 → 停；
@@ -92,12 +94,15 @@ node scripts/build-icon.mjs        # 产物：assets/blank.ico
   → 结果是闪一下就停，盯着屏幕的人反而毫无反馈
 ```
 
-`flashUntilMouseMoves`（默认开）把确认信号从「窗口获得焦点」换成「**鼠标动了**」：
+`flashUntilMouseMoves`（默认开）把确认信号从「窗口获得焦点」换成「**鼠标动了**」。它只在**没有真实黄点/绿点**时生效：
 
 | 情况 | 停止条件 |
 |---|---|
-| 窗口在**后台**时开始闪 | 切回窗口即停（切回本身就是动作） |
-| 窗口在**前台**、当前会话完成 | **鼠标移动**、切换会话、或窗口失焦才停 |
+| 窗口在**后台**时开始闪，且没有真实点 | 切回窗口即停（切回本身就是动作） |
+| 窗口在**前台**、当前会话完成，且没有真实点 | **鼠标移动**、切换会话、或窗口失焦才停 |
+| 侧边栏还有**黄点/绿点** | 焦点、失焦、会话切换、鼠标移动**都不算数**；一直闪到点归零 |
+
+最后一行是硬规则：真实点代表「你还没看过这件事」，而鼠标只是「你碰了一下窗口」。0.5.1 曾把鼠标规则套在所有前台触发的闪烁上，结果点还挂在侧边栏，一动鼠标（也就是点一下主窗口）就不闪了——0.5.2 改成真实点优先，鼠标规则只负责主会话「没有点可等」的那一种情况。
 
 鼠标检测走已有的 1 秒轮询，不新增定时器。任意 1 像素的移动都算——要求移动距离反而会让小幅度的、明确的动作失效。
 
@@ -111,7 +116,7 @@ flashUntilMouseMoves: false
 
 ## 安装
 
-包目录：`E:\0_opencode\.00工作空间\dsh-tray-flash`
+包目录：`E:\0_opencode\.00工作空间\插件制作\dsh-tray-flash`
 
 `desktop` profile 由 Electron 应用独占，`dsh plugin --profile desktop` 会直接报错，插件管理器的 `install_bundle` 也不一定可用。因此安装等价于 pnpm 的 `link:`：
 
@@ -126,7 +131,7 @@ Copy-Item "$env:USERPROFILE\.dsh\profiles\desktop\package.json" `
 # 3. 建目录联接（与 pnpm link: 的产物等价）
 New-Item -ItemType Junction `
   -Path "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\dsh-tray-flash" `
-  -Target "E:\0_opencode\.00工作空间\dsh-tray-flash"
+  -Target "E:\0_opencode\.00工作空间\插件制作\dsh-tray-flash"
 ```
 
 **不需要**改 `~/.dsh/profiles/desktop/cordis.patch.yml`：本包自带的 `cordis.patch.yml` 会插入自己的行。
@@ -214,7 +219,7 @@ node scripts/selftest.mjs 36001
 node --test test/*.test.mjs
 ```
 
-156 个用例，覆盖点跟踪（计数、虚拟未读、失联降级、Client 重启）、**点触发闪烁**（绿点晚于 `turn/end` 出现时仍能启动、只在数量增加时启动、已在闪时不重启、**点长期不变仍持续闪**）、状态机（点消失才停、焦点回退、超时仅在手配时生效、去重、子代理与打断过滤、托盘联动）、Client 半（点数、节流、未变化不重发、30 秒心跳、卸载清空、失败静默）、托盘闪烁（id 探测、透明帧、图标生命周期、恢复、降级）、Win32 绑定、配置归一化、koffi 兜底链、本机围栏与路由，以及 Host 入口的激活/释放。
+175 个用例，覆盖点跟踪（计数、虚拟未读、失联降级、Client 重启）、**点触发闪烁**（绿点晚于 `turn/end` 出现时仍能启动、只在数量增加时启动、已在闪时不重启、**点长期不变仍持续闪**）、状态机（点消失才停、真实黄/绿点优先于焦点与鼠标、焦点回退、超时仅在手配时生效、去重、子代理与打断过滤、托盘联动）、Client 半（点数、节流、未变化不重发、30 秒心跳、卸载清空、失败静默）、托盘闪烁（id 探测、透明帧、图标生命周期、恢复、降级）、Win32 绑定、配置归一化、koffi 兜底链、本机围栏与路由，以及 Host 入口的激活/释放。
 
 ### 真实环境验证脚本
 
@@ -226,7 +231,7 @@ $pid = (Get-CimInstance Win32_Process -Filter "Name='DeepSeek Harness.exe'" |
         Where-Object { $_.CommandLine -notlike '*--type=*' }).ProcessId
 
 # 托盘图标能否加载、id 能否找到、start/stop 是否成功
-$env:ELECTRON_RUN_AS_NODE=1; & $exe "E:\0_opencode\.00工作空间\dsh-tray-flash\scripts\probe-tray.mjs" $pid
+$env:ELECTRON_RUN_AS_NODE=1; & $exe "E:\0_opencode\.00工作空间\插件制作\dsh-tray-flash\scripts\probe-tray.mjs" $pid
 
 # 两个状态是否真的长得不一样（截图像素差）
 & $exe "...\scripts\probe-tray-visual.mjs" $pid
